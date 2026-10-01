@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RhythmDice AI - Inovasi Pendidikan Muzik</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #74b9ff, #a29bfe);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: #2d3436;
+        }
+        .container {
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+        }
+        h1 { color: #0984e3; margin-bottom: 5px; font-size: 24px; }
+        .subtitle { font-size: 14px; color: #636e72; margin-bottom: 20px; }
+        .btn {
+            background-color: #00b894;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: 0.3s;
+            margin: 10px 5px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        .btn:hover { background-color: #00a884; transform: translateY(-2px); }
+        .btn-mic { background-color: #e17055; }
+        .btn-mic:hover { background-color: #d63031; }
+        .dice-box {
+            font-size: 60px;
+            margin: 20px 0;
+            background: #dfe6e9;
+            border-radius: 15px;
+            padding: 20px;
+            display: inline-block;
+            min-width: 100px;
+        }
+        .rhythm-display {
+            background: #f1f2f6;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            border-left: 5px solid #0984e3;
+            text-align: left;
+        }
+        .rhythm-title { font-weight: bold; color: #2d3436; font-size: 18px; }
+        .rhythm-desc { color: #636e72; font-size: 14px; margin-top: 5px; }
+        .feedback {
+            font-size: 18px;
+            font-weight: bold;
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 8px;
+        }
+        .success { background-color: #55efc4; color: #00b894; }
+        .try-again { background-color: #ffeaa7; color: #d63031; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🎵 RhythmDice AI</h1>
+    <div class="subtitle">Aplikasi Latihan Corak Irama Sekolah Rendah</div>
+
+    <button class="btn" onclick="rollDice()">🎲 Baling Dadu Mula</button>
+    
+    <div>
+        <div id="diceResult" class="dice-box">🎲</div>
+    </div>
+
+    <div id="rhythmCard" class="rhythm-display" style="display:none;">
+        <div id="rhythmTitle" class="rhythm-title">Corak Irama: -</div>
+        <div id="rhythmDesc" class="rhythm-desc">Not: -</div>
+    </div>
+
+    <button id="micBtn" class="btn btn-mic" onclick="startListening()" style="display:none;" disabled>🎙️ Rakam Tepukan</button>
+
+    <div id="feedbackBox"></div>
+</div>
+
+<script>
+    const patterns = {
+        1: { name: "Corak 1 (Semibrif)", targetClaps: 1, desc: "Semibrif (Ta-a-a-a) - 1 Tepukan Panjang" },
+        2: { name: "Corak 2 (Minim)", targetClaps: 2, desc: "Minim, Minim (Ta-a, Ta-a) - 2 Tepukan" },
+        3: { name: "Corak 3 (Krochet)", targetClaps: 4, desc: "Krochet x4 (Ta, Ta, Ta, Ta) - 4 Tepukan Sekata" },
+        4: { name: "Corak 4 (Kuaver Campur)", targetClaps: 6, desc: "Kuaver & Krochet (Ti-ti, Ti-ti, Ta, Ta)" },
+        5: { name: "Corak 5 (Minim & Krochet)", targetClaps: 3, desc: "Minim, Krochet, Krochet (Ta-a, Ta, Ta) - 3 Tepukan" },
+        6: { name: "Corak 6 (Kuaver Penuh)", targetClaps: 8, desc: "8 Kuaver (Ti-ti Ti-ti Ti-ti Ti-ti) - 8 Tepukan Cepat" }
+    };
+
+    let currentPattern = null;
+
+    function rollDice() {
+        const diceEl = document.getElementById("diceResult");
+        diceEl.innerText = "🌀";
+        
+        setTimeout(() => {
+            const roll = Math.floor(Math.random() * 6) + 1;
+            diceEl.innerText = roll;
+            
+            currentPattern = patterns[roll];
+            document.getElementById("rhythmTitle").innerText = currentPattern.name;
+            document.getElementById("rhythmDesc").innerText = "Sila tepuk: " + currentPattern.desc;
+            document.getElementById("rhythmCard").style.display = "block";
+            
+            const micBtn = document.getElementById("micBtn");
+            micBtn.style.display = "inline-block";
+            micBtn.disabled = false;
+            micBtn.innerText = "🎙️ Rakam Tepukan";
+            
+            document.getElementById("feedbackBox").innerHTML = "";
+        }, 500);
+    }
+
+    async function startListening() {
+        const micBtn = document.getElementById("micBtn");
+        const feedbackBox = document.getElementById("feedbackBox");
+        
+        micBtn.disabled = true;
+        micBtn.innerText = "⏳ Mendengar... Tepuk sekarang!";
+        feedbackBox.innerHTML = "";
+
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const analyser = audioContext.createAnalyser();
+            const microphone = audioContext.createMediaStreamSource(stream);
+            microphone.connect(analyser);
+            analyser.fftSize = 256;
+            
+            const dataArray = new Uint8Array(analyser.frequencyBinCount);
+            let clapsDetected = 0;
+            let isClapping = false;
+
+            // Rakam selama 4 saat
+            const recordingInterval = setInterval(() => {
+                analyser.getByteFrequencyData(dataArray);
+                let sum = dataArray.reduce((a, b) => a + b, 0);
+                let average = sum / dataArray.length;
+
+                // Ambang kepekaan dikurangkan kepada 25 supaya lebih mudah dikesan
+                if (average > 25 && !isClapping) {
+                    isClapping = true;
+                    clapsDetected++;
+                    micBtn.innerText = `⏳ Dikesan: ${clapsDetected} tepukan...`;
+                } else if (average < 12) {
+                    isClapping = false;
+                }
+            }, 80);
+
+            setTimeout(() => {
+                clearInterval(recordingInterval);
+                stream.getTracks().forEach(track => track.stop());
+                audioContext.close();
+
+                micBtn.disabled = false;
+                micBtn.innerText = "🎙️ Rakam Semula";
+
+                // Semakan lebih fleksibel (benarkan julat +/- 1 tepukan supaya tidak terlalu strict)
+                let target = currentPattern.targetClaps;
+                if (clapsDetected >= target - 1 && clapsDetected <= target + 2) {
+                    feedbackBox.innerHTML = `<div class="feedback success">🎉 Tahniah! Tepukan Betul & Tepat! (${clapsDetected} tepukan dikesan)</div>`;
+                } else {
+                    feedbackBox.innerHTML = `<div class="feedback try-again">⚠️ Dikesan ${clapsDetected} tepukan (Sasaran: ~${target}). Cuba Lagi dengan tempo yang betul!</div>`;
+                }
+            }, 4000);
+
+        } catch (err) {
+            alert("Sila benarkan akses mikrofon (Allow Microphone) pada pelayar anda!");
+            micBtn.disabled = false;
+            micBtn.innerText = "🎙️ Rakam Tepukan";
+        }
+    }
+</script>
+
+</body>
+</html>
