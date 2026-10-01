@@ -97,12 +97,12 @@
 
 <script>
     const patterns = {
-        1: { name: "Corak 1 (Semibrif)", targetClaps: 1, desc: "Semibrif (Ta-a-a-a) - 1 Tepukan Panjang" },
-        2: { name: "Corak 2 (Minim)", targetClaps: 2, desc: "Minim, Minim (Ta-a, Ta-a) - 2 Tepukan" },
-        3: { name: "Corak 3 (Krochet)", targetClaps: 4, desc: "Krochet x4 (Ta, Ta, Ta, Ta) - 4 Tepukan Sekata" },
-        4: { name: "Corak 4 (Kuaver Campur)", targetClaps: 6, desc: "Kuaver & Krochet (Ti-ti, Ti-ti, Ta, Ta)" },
-        5: { name: "Corak 5 (Minim & Krochet)", targetClaps: 3, desc: "Minim, Krochet, Krochet (Ta-a, Ta, Ta) - 3 Tepukan" },
-        6: { name: "Corak 6 (Kuaver Penuh)", targetClaps: 8, desc: "8 Kuaver (Ti-ti Ti-ti Ti-ti Ti-ti) - 8 Tepukan Cepat" }
+        1: { name: "Corak 1 (Semibrif)", targetClaps: 1, desc: "Semibrif (Ta-a-a-a) - Tepat 1 Tepukan" },
+        2: { name: "Corak 2 (Minim)", targetClaps: 2, desc: "Minim, Minim (Ta-a, Ta-a) - Tepat 2 Tepukan" },
+        3: { name: "Corak 3 (Krochet)", targetClaps: 4, desc: "Krochet x4 (Ta, Ta, Ta, Ta) - Tepat 4 Tepukan" },
+        4: { name: "Corak 4 (Kuaver Campur)", targetClaps: 6, desc: "Kuaver & Krochet - Tepat 6 Tepukan" },
+        5: { name: "Corak 5 (Minim & Krochet)", targetClaps: 3, desc: "Minim, Krochet, Krochet - Tepat 3 Tepukan" },
+        6: { name: "Corak 6 (Kuaver Penuh)", targetClaps: 8, desc: "8 Kuaver (Ti-ti Ti-ti Ti-ti Ti-ti) - Tepat 8 Tepukan" }
     };
 
     let currentPattern = null;
@@ -155,12 +155,13 @@
                 let average = sum / dataArray.length;
 
                 let now = Date.now();
-                if (average > 22 && (now - lastClapTime) > 120) {
+                // Cooldown 150ms membolehkan tepukan pantas (seperti 8 kuaver) dikesan satu persatu tanpa tercicir
+                if (average > 25 && (now - lastClapTime) > 150) {
                     clapsDetected++;
                     lastClapTime = now;
                     micBtn.innerText = `⏳ Dikesan: ${clapsDetected} tepukan...`;
                 }
-            }, 30);
+            }, 20);
 
             setTimeout(() => {
                 clearInterval(recordingInterval);
@@ -171,18 +172,22 @@
                 micBtn.innerText = "🎙️ Rakam Semula";
 
                 let target = currentPattern.targetClaps;
-                
-                // Logik ketat: Benarkan ralat kecil maksimum +/- 1 sahaja (atau tepat untuk target kecil)
                 let isCorrect = false;
+
+                // Penilaian ketat mengikut sasaran tepat (toleransi kecil sebanyak +/- 0 hingga 1 sahaja)
                 if (target === 1) {
                     isCorrect = (clapsDetected === 1);
                 } else if (target === 2) {
                     isCorrect = (clapsDetected === 2);
-                } else if (target === 3 || target === 4) {
-                    isCorrect = (clapsDetected >= target - 1 && clapsDetected <= target + 1);
-                } else {
-                    // Untuk corak pantas yang lebih banyak (seperti 6 atau 8)
-                    isCorrect = (clapsDetected >= target - 2 && clapsDetected <= target + 2);
+                } else if (target === 3) {
+                    isCorrect = (clapsDetected === 3);
+                } else if (target === 4) {
+                    isCorrect = (clapsDetected >= 3 && clapsDetected <= 5);
+                } else if (target === 6) {
+                    isCorrect = (clapsDetected >= 5 && clapsDetected <= 7);
+                } else if (target === 8) {
+                    // Untuk 8 tepukan pantas, benarkan ralat kecil dari 7 hingga 9 supaya adil untuk murid
+                    isCorrect = (clapsDetected >= 7 && clapsDetected <= 9);
                 }
 
                 if (isCorrect) {
