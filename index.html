@@ -123,7 +123,7 @@
             const micBtn = document.getElementById("micBtn");
             micBtn.style.display = "inline-block";
             micBtn.disabled = false;
-            micBtn.innerText = "🎙️ Rakam Tepukan";
+            micBtn.innerText = "🎙️️ Rakam Tepukan";
             
             document.getElementById("feedbackBox").innerHTML = "";
         }, 500);
@@ -143,12 +143,11 @@
             const analyser = audioContext.createAnalyser();
             const microphone = audioContext.createMediaStreamSource(stream);
             microphone.connect(analyser);
-            analyser.fftSize = 256;
+            analyser.fftSize = 512;
             
             const dataArray = new Uint8Array(analyser.frequencyBinCount);
             let clapsDetected = 0;
             let lastClapTime = 0;
-            let waitingForSilence = false;
 
             const recordingInterval = setInterval(() => {
                 analyser.getByteFrequencyData(dataArray);
@@ -156,22 +155,14 @@
                 let average = sum / dataArray.length;
 
                 let now = Date.now();
-
-                // Jika sedang menunggu sunyi (untuk buang echo/gema tapak tangan)
-                if (waitingForSilence) {
-                    if (average < 15) {
-                        waitingForSilence = false; // Bunyi dah senyap, boleh terima tepukan seterusnya
-                    }
-                } else {
-                    // Ambang ketat 35 dan jeda masa 350ms untuk elak gema dikesan
-                    if (average > 35 && (now - lastClapTime) > 350) {
-                        clapsDetected++;
-                        lastClapTime = now;
-                        waitingForSilence = true; // Kunci sebentar untuk tapis gema tepukan yang sama
-                        micBtn.innerText = `⏳ Dikesan: ${clapsDetected} tepukan...`;
-                    }
+                // Ambang dinaikkan kepada 45 supaya sentuhan tangan biasa sahaja yang lepas,
+                // dan jarak masa (lockout) dipanjangkan kepada 400ms supaya tiada bunyi bertindih/gema dikira.
+                if (average > 45 && (now - lastClapTime) > 400) {
+                    clapsDetected++;
+                    lastClapTime = now;
+                    micBtn.innerText = `⏳ Dikesan: ${clapsDetected} tepukan...`;
                 }
-            }, 25);
+            }, 30);
 
             setTimeout(() => {
                 clearInterval(recordingInterval);
