@@ -147,23 +147,22 @@
             
             const dataArray = new Uint8Array(analyser.frequencyBinCount);
             let clapsDetected = 0;
-            let isClapping = false;
+            let lastClapTime = 0;
 
-            // Rakam selama 4 saat
+            // Semakan frekuensi tinggi setiap 30 milisaat untuk tangkap tepukan pantas
             const recordingInterval = setInterval(() => {
                 analyser.getByteFrequencyData(dataArray);
                 let sum = dataArray.reduce((a, b) => a + b, 0);
                 let average = sum / dataArray.length;
 
-                // Ambang kepekaan dikurangkan kepada 25 supaya lebih mudah dikesan
-                if (average > 25 && !isClapping) {
-                    isClapping = true;
+                let now = Date.now();
+                // Ambang kepekaan 22 dengan jeda 120ms membolehkan tepukan pantas dikira satu persatu
+                if (average > 22 && (now - lastClapTime) > 120) {
                     clapsDetected++;
+                    lastClapTime = now;
                     micBtn.innerText = `⏳ Dikesan: ${clapsDetected} tepukan...`;
-                } else if (average < 12) {
-                    isClapping = false;
                 }
-            }, 80);
+            }, 30);
 
             setTimeout(() => {
                 clearInterval(recordingInterval);
@@ -173,19 +172,21 @@
                 micBtn.disabled = false;
                 micBtn.innerText = "🎙️ Rakam Semula";
 
-                // Semakan lebih fleksibel (benarkan julat +/- 1 tepukan supaya tidak terlalu strict)
                 let target = currentPattern.targetClaps;
-                if (clapsDetected >= target - 1 && clapsDetected <= target + 2) {
+                // Julat ralat yang lebih toleran supaya murid sekolah rendah mudah lepas
+                let tolerance = target === 8 ? 3 : 2;
+
+                if (clapsDetected >= target - tolerance && clapsDetected <= target + tolerance) {
                     feedbackBox.innerHTML = `<div class="feedback success">🎉 Tahniah! Tepukan Betul & Tepat! (${clapsDetected} tepukan dikesan)</div>`;
                 } else {
-                    feedbackBox.innerHTML = `<div class="feedback try-again">⚠️ Dikesan ${clapsDetected} tepukan (Sasaran: ~${target}). Cuba Lagi dengan tempo yang betul!</div>`;
+                    feedbackBox.innerHTML = `<div class="feedback try-again">⚠️ Dikesan ${clapsDetected} tepukan (Sasaran: ~${target}). Cuba Lagi!</div>`;
                 }
             }, 4000);
 
         } catch (err) {
             alert("Sila benarkan akses mikrofon (Allow Microphone) pada pelayar anda!");
             micBtn.disabled = false;
-            micBtn.innerText = "🎙️ Rakam Tepukan";
+            micBtn.innerText = "🎙️️ Rakam Tepukan";
         }
     }
 </script>
